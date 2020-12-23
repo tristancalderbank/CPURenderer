@@ -4,39 +4,29 @@
 #include "bmpimage.h"
 #include "line.h"
 #include "model.h"
+#include "triangle.h"
 
 const BMPColor white = BMPColor(255, 255, 255, 255);
 const BMPColor red = BMPColor(255, 0, 0, 255);
 const BMPColor blue = BMPColor(0, 0, 255, 255);
 const BMPColor green = BMPColor(0, 255, 0, 255);
- 
-const int height = 800;
-const int width = 800;
+
+const int height = 200;
+const int width = 200;
 
 int main(int argc, char** argv) {
     BMPImage image(height, width, 3);
     
     Model* model = new Model("obj/african_head.obj");
 
-    for (int i = 0; i < model->nfaces(); i++) {
-        std::vector<int> face = model->face(i);
-        
-        // draw three lines per face to form a triangle
-        for (int j = 0; j < 3; j++) {
-            Vec3f vertex0 = model->vert(face[j]);
-            Vec3f vertex1 = model->vert(face[(j + 1) % 3]);
+    // triangles
+    Vec2i t0[3] = { Vec2i(10, 70),   Vec2i(50, 160),  Vec2i(70, 80) };
+    Vec2i t1[3] = { Vec2i(180, 50),  Vec2i(150, 1),   Vec2i(70, 180) };
+    Vec2i t2[3] = { Vec2i(180, 150), Vec2i(120, 160), Vec2i(130, 180) };
 
-            // just ignore Z axis (orthographic projection)
-            // vertex coordinates are floating point between -1 to 1
-            // add one to make it between 0 to 2
-            // calculate the fraction of 2.0 and multiply by either width/height
-            int x0 = ((vertex0.x + 1) / 2.0) * width;
-            int y0 = ((vertex0.y + 1) / 2.0) * height;
-            int x1 = ((vertex1.x + 1) / 2.0) * width;
-            int y1 = ((vertex1.y + 1) / 2.0) * height;
-            line(x0, y0, x1, y1, image, white);
-        }
-    }
+    triangle(t0[0], t0[1], t0[2], image, red);
+    triangle(t1[0], t1[1], t1[2], image, white);
+    triangle(t2[0], t2[1], t2[2], image, green);
 
     char* imageFileName = (char*)"bitmapImage.bmp";
     image.save(imageFileName);
