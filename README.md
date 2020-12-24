@@ -54,7 +54,7 @@ I did eventually get this method working but it had some artifacts on the edges 
 
 Nice!
 
-And just to show this off more here's the head model from earlier with random colors for each filled triangle.
+And just to show this off more here's the head model from earlier with random colors for each filled triangle (new album art?).
 
 <img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/triangles_filled_head_backwards.PNG" width="400">
 
