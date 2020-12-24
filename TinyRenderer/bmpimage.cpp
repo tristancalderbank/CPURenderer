@@ -102,7 +102,7 @@ void BMPImage::save(char* fileName) {
 
 void BMPImage::set(int x, int y, BMPColor color) {
     // ignore pixels exactly on the positive boundaries 
-    if (x == width || y == height) {
+    if (x >= width || y >= height || x < 0 || y < 0) {
         return;
     }
 
