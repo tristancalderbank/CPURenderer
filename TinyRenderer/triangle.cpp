@@ -31,6 +31,10 @@ bool pointInTriangle(Vec2i point, Vec2i p0, Vec2i p1, Vec2i p2) {
 }
 
 void triangle(Vec2i p0, Vec2i p1, Vec2i p2, BMPImage& image, BMPColor color) {
+    if (p0.y == p1.y && p0.y == p2.y) {
+        return;
+    }
+
     // compute bounding box of the triangle
     int minX = std::min(p0.x, std::min(p1.x, p2.x));
     int maxX = std::max(p0.x, std::max(p1.x, p2.x));
@@ -47,6 +51,10 @@ void triangle(Vec2i p0, Vec2i p1, Vec2i p2, BMPImage& image, BMPColor color) {
             }
         }
     }
+   
+    line(p0, p1, image, color);
+    line(p1, p2, image, color);
+    line(p2, p0, image, color);
 }
 
 
