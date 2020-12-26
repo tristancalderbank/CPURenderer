@@ -58,3 +58,9 @@ And just to show this off more here's the head model from earlier with random co
 
 <img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/triangles_filled_head_backwards.PNG" width="400">
 
+Alternatively we can add a basic light vector pointing into the image. We can then calculate a normal vector for each triangle using a cross-product of the sides. We can then determine the brightness of the triangles by taking the dot product of the light vector with each triangle normal.
+
+<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/triangles_filled_head_lighting.PNG" width="400">
+
+This is a really basic way to do lighting. There are smarter ways which use interpolated normals for each pixel rather than one per triangle.
+
