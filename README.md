@@ -62,5 +62,5 @@ Alternatively we can add a basic light vector pointing into the image. We can th
 
 <img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/triangles_filled_head_lighting.PNG" width="400">
 
-This is a really basic way to do lighting. There are smarter ways which use interpolated normals for each pixel rather than one per triangle.
+This is a really basic way to do lighting (flat shading). There are smarter ways which use interpolated normals for each pixel rather than one per triangle.
 
