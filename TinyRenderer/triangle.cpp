@@ -31,7 +31,7 @@ Vec3f barycentric(Vec3f a, Vec3f b, Vec3f c, Vec3f point) {
     );
 }
 
-void triangle(Vec3f p0, Vec3f p1, Vec3f p2, BMPImage& image, float* zBuffer, BMPColor color) {
+void rasterize(Vec3f p0, Vec3f p1, Vec3f p2, BMPImage& image, float* zBuffer, BMPColor color) {
     if (p0.y == p1.y && p0.y == p2.y) {
         return;
     }

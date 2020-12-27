@@ -7,6 +7,7 @@
 #include "model.h"
 #include "triangle.h"
 #include "geometry.h"
+#include "shader.h"
 
 const BMPColor white = BMPColor(255, 255, 255, 255);
 const BMPColor grey = BMPColor(128, 128, 128, 255);
@@ -80,7 +81,7 @@ int main(int argc, char** argv) {
 
     Model* model = new Model("obj/african_head.obj");
 
-    Vec3f lightDirection = Vec3f(0, 0, -1);
+    FlatLightingShader flatLightingShader = FlatLightingShader(Vec3f(0, 0, -1));
 
     for (int i = 0; i < model->nfaces(); i++) {
         std::vector<int> face = model->face(i);
@@ -105,14 +106,10 @@ int main(int argc, char** argv) {
         Vec3f normal = cross(faceWorldCoordinates[2] - faceWorldCoordinates[0], faceWorldCoordinates[1] - faceWorldCoordinates[0]);
         normal.normalize();
 
-        // dot the surface normal with the light direction to get intensity
-        float intensity = normal * lightDirection;
-
         // don't bother filling completely black triangles
-        if (intensity > 0) {
-            BMPColor color = BMPColor(intensity * 255, intensity * 255, intensity * 255, 255);
-            triangle(faceScreenCoordnates[0], faceScreenCoordnates[1], faceScreenCoordnates[2], image, zBuffer, color);
-        }
+
+        BMPColor color = flatLightingShader.shade(FragmentShaderInput(normal));
+        rasterize(faceScreenCoordnates[0], faceScreenCoordnates[1], faceScreenCoordnates[2], image, zBuffer, color);
     }
 
     BMPImage zBufferImage = zBufferToImage(zBuffer, width, height);
