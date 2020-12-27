@@ -64,3 +64,20 @@ Alternatively we can add a basic light vector pointing into the image. We can th
 
 This is a really basic way to do lighting (flat shading). There are smarter ways which use interpolated normals across pixels/vertices to get smoother lighting.
 
+### Depth Testing (z-buffer)
+
+A problem with the renders above is that we aren't keep track of which triangles are in front of each other, we're just rendering them all in the order they happen to be in the `.obj` model file. For example the mouth looks weird because we're rendering the inside triangles on top of the lips triangles.
+
+An easy way to deal with this is to keep another data structure around called a z-buffer. The z-buffer is basically the same as the main image (a 2D array) but instead of RGB for each pixel we store the current depth of the corresponding pixel in the main image.  
+
+Whenever we're about to draw a pixel for a triangle we calculate a z-value for the pixel (using some interpolation based on the vertex z values) and only draw it if its greater than the current value in the z-buffer.
+
+The z-buffer stores floating point z-values but if we convert it to RGB values between 0-255 this is what we see.
+
+<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/zbuffer_buffer.PNG" width="400">
+
+Now if you compare the mouth of the model rendered you can see we now correctly render the closer triangles on top of the image.
+
+<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/zbuffer.PNG" width="400">
+
+
