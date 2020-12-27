@@ -108,3 +108,11 @@ void BMPImage::set(int x, int y, BMPColor color) {
 
     memcpy(data + (x + y * width) * bytesPerPixel, color.raw, bytesPerPixel);
 }
+
+int BMPImage::getWidth() {
+    return width;
+}
+
+int BMPImage::getHeight() {
+    return height;
+}

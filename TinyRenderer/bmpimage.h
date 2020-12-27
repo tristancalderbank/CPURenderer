@@ -50,6 +50,8 @@ public:
 
 	void save(char* fileName);
 	void set(int x, int y, BMPColor color);
+	int getWidth();
+	int getHeight();
 };
 
 #endif //__BMP_IMAGE_H__

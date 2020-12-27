@@ -2,38 +2,41 @@
 #include "line.h"
 #include "triangle.h"
 
-bool pointInTriangle(Vec2i point, Vec2i p0, Vec2i p1, Vec2i p2) {
-    // Based on: https://stackoverflow.com/a/14382692/7401903
-    // To see how its derived: https://en.wikipedia.org/wiki/Barycentric_coordinate_system#Conversion_between_barycentric_and_Cartesian_coordinates
-
-    // calculate area (easy way to get determinant for the barycentric calculation later)
-    float area = 0.5 * (-p1.y * p2.x + p0.y * (-p1.x + p2.x) + p0.x * (p1.y - p2.y) + p1.x * p2.y);
-
-    // calculate barycentric coordinates of the point with respect to the triangle
-    float s = 1.0 / (2.0 * area) * (p0.y * p2.x - p0.x * p2.y + (p2.y - p0.y) * point.x + (p0.x - p2.x) * point.y);
-
-    if (s < 0) {
-        return false;
-    }
-    
-    float t = 1.0 / (2.0 * area) * (p0.x * p1.y - p0.y * p1.x + (p0.y - p1.y) * point.x + (p1.x - p0.x) * point.y);
-
-    if (t < 0) {
-        return false;
-    }
-
-    // check 3rd coordinate
-    if ((1.0 - s - t) < 0) {
-        return false;
-    }
-
-    return true;
+bool pointInTriangle(Vec3f barycentricCoordinates) {
+    return !(barycentricCoordinates.x < 0 || barycentricCoordinates.y < 0 || barycentricCoordinates.z < 0);
 }
 
-void triangle(Vec2i p0, Vec2i p1, Vec2i p2, BMPImage& image, BMPColor color) {
+// Returns barycentric coordinates for a point with respect to a triangle
+Vec3f barycentric(Vec3f a, Vec3f b, Vec3f c, Vec3f point) {
+    // calculate [u v 1] vector by cross product:  [ACy ABy APy] x [ACx ABx APx]
+
+    Vec3f xVec = Vec3f(
+        c.x - a.x,
+        b.x - a.x,
+        a.x - point.x
+    );
+
+    Vec3f yVec = Vec3f(
+        c.y - a.y,
+        b.y - a.y,
+        a.y - point.y
+    );
+
+    Vec3f uv = cross(yVec, xVec);
+
+    return Vec3f(
+        1.0f - (uv.x + uv.y) / uv.z,
+        uv.y / uv.z,
+        uv.x / uv.z
+    );
+}
+
+void triangle(Vec3f p0, Vec3f p1, Vec3f p2, BMPImage& image, float* zBuffer, BMPColor color) {
     if (p0.y == p1.y && p0.y == p2.y) {
         return;
     }
+
+    int width = image.getWidth();
 
     // compute bounding box of the triangle
     int minX = std::min(p0.x, std::min(p1.x, p2.x));
@@ -46,15 +49,20 @@ void triangle(Vec2i p0, Vec2i p1, Vec2i p2, BMPImage& image, BMPColor color) {
 
     for (int x = minX; x <= maxX; x++) {
         for (int y = minY; y <= maxY; y++) {
-            if (pointInTriangle(Vec2i(x, y), p0, p1, p2)) {
-                image.set(x, y, color);
+            Vec3f barycentricCoordinates = barycentric(p0, p1, p2, Vec3f(x, y, 0));
+
+            if (pointInTriangle(barycentricCoordinates)) {
+                // perform depth test using z-buffer
+                // calculate interpolated z value of the current pixel
+                float z = p0.z * barycentricCoordinates.x + p1.z * barycentricCoordinates.y + p2.z * barycentricCoordinates.z;
+
+                if (z > zBuffer[x + y * width]) {
+                    image.set(x, y, color);
+                    zBuffer[x + y * width] = z;
+                }
             }
         }
     }
-   
-    line(p0, p1, image, color);
-    line(p1, p2, image, color);
-    line(p2, p0, image, color);
 }
 
 
