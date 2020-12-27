@@ -76,7 +76,7 @@ The z-buffer stores floating point z-values but if we convert it to RGB values b
 
 <img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/zbuffer_buffer.PNG" width="400">
 
-Now if you compare the mouth of the model rendered you can see we now correctly render the closer triangles on top of the image.
+Now applying this to the main image, if you compare the mouth of the model rendered you can see we now correctly render the closer triangles on top of the image.
 
 <img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/zbuffer.PNG" width="400">
 
