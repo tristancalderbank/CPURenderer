@@ -80,4 +80,23 @@ Now applying this to the main image, if you compare the mouth of the model rende
 
 <img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/zbuffer.PNG" width="400">
 
+### Textures
+
+So the way this works is that inside the `.obj` file we have a 2-D texture coordinate for each triangle vertex. That texture coordinate tells you the location for that vertex in a texture image file. 
+
+The hard part is how do you calculate the right texture coordinate for the interpolated points inside the triangle that aren't vertices?
+
+Once again the key is: [Barycentric Coordinates](https://en.wikipedia.org/wiki/Barycentric_coordinate_system)
+
+The reason these are so useful is because they let you specify any point in a triangle as a weighted sum of the vertex coordinates. What that means is if you have a point specified as the weighted sum of the triangle vertices, then the texture coordinates for that point are just a weighted sum of the texture coordinates for each vertex (because barycentric coordinates sum to 1).
+
+Lets try it.
+
+<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/texture_failed.PNG" width="400">
+
+Oops!
+
+<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/texture.PNG" width="400">
+
+Thats better.
 
