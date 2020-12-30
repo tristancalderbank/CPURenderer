@@ -88,7 +88,9 @@ The hard part is how do you calculate the right texture coordinate for the inter
 
 Once again the key is: [Barycentric Coordinates](https://en.wikipedia.org/wiki/Barycentric_coordinate_system)
 
-The reason these are so useful is because they let you specify any point in a triangle as a weighted sum of the vertex coordinates. What that means is if you have a point specified as the weighted sum of the triangle vertices, then the texture coordinates for that point are just a weighted sum of the texture coordinates for each vertex (because barycentric coordinates sum to 1).
+The reason these are so useful is because they let you specify any point in a triangle as a weighted sum of the vertex coordinates. For example they could tell you point P has contributions from vertices A, B ,C of (0.1, 0.2. 0.7). 
+
+Now the real key here is that if point P is a weighted sum of the vertex points, then the texture coordinate of point P is just a weighted sum of the texture coordinates for each vertex, using the bary coordinates as weights (this works because the barycentric coordinates are normalized, as in they sum to 1).
 
 Lets try it.
 
