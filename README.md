@@ -102,3 +102,16 @@ Oops!
 
 Thats better.
 
+### Perspective Projection
+
+In real life distant objects appear smaller than close objects. For example staring down some railroad tracks, they appear to bend towards eachother even though they are parallel. 
+
+To get this effect you can essentially just divide the x/y coordinates of a vertex by the z coordinate (scaled by some factor). What this means is vertices with higher z values (away from the camera) are squished towards the center of the camera.
+
+**Before**
+
+<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/texture.PNG" width="400">
+
+**After**
+
+<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/perspective.PNG" width="400">
