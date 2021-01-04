@@ -110,7 +110,7 @@ To get this effect you can essentially just divide the x/y coordinates of a vert
 
 **Before**
 
-<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/texture.PNG" width="400">
+<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/orthographic.PNG" width="400">
 
 **After**
 
