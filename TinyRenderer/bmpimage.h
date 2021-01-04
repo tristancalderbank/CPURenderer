@@ -50,6 +50,7 @@ public:
 
 	void save(char* fileName);
 	void set(int x, int y, BMPColor color);
+	void clear();
 	int getWidth();
 	int getHeight();
 };

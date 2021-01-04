@@ -33,7 +33,13 @@ Vec3f barycentric(Vec3f a, Vec3f b, Vec3f c, Vec3f point) {
     );
 }
 
+bool pointOutsideImage(int x, int y, int width, int height) {
+    return (x < 0 || y < 0 || x > width || y > height);
+}
+
 void rasterize(Vec3f p0, Vec3f p1, Vec3f p2, Vec3f uvCoordinates[3], Vec3f normal, BMPImage& image, float* zBuffer, std::vector<FragmentShader*> shaders) {
+    
+    // discard degenerate triangles
     if (p0.y == p1.y && p0.y == p2.y) {
         return;
     }
@@ -50,6 +56,10 @@ void rasterize(Vec3f p0, Vec3f p1, Vec3f p2, Vec3f uvCoordinates[3], Vec3f norma
     // iterate over the bounding box
     for (int x = minX; x <= maxX; x++) {
         for (int y = minY; y <= maxY; y++) {
+            if (pointOutsideImage(x, y, image.getWidth(), image.getHeight())) {
+                continue;
+            }
+
             Vec3f barycentricCoordinates = barycentric(p0, p1, p2, Vec3f(x, y, 0));
 
             if (pointInTriangle(barycentricCoordinates)) {
