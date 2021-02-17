@@ -8,6 +8,7 @@
 struct FragmentShaderInput {
     BMPColor color;
     Vec3f normal;
+    Vec3f surfaceNormal;
     Vec2f uvCoordinates;
 
     FragmentShaderInput() {}
@@ -33,15 +34,40 @@ public:
     }
 };
 
+/*
+    Lighting shader which uses the surface normal of the triangle.
+*/
 class FlatLightingShader : public FragmentShader {
 
     Vec3f lightDirection;
 
+public:
+
+    FlatLightingShader(Vec3f lightDirection) : lightDirection(lightDirection) {}
+
+    BMPColor shade(FragmentShaderInput in) {
+        float intensity = in.surfaceNormal * lightDirection;
+        intensity = std::max(intensity, 0.f);
+
+        return BMPColor(in.color.r * intensity, in.color.g * intensity, in.color.b * intensity, in.color.a);
+    }
+};
+
+/*
+    Lighting shader that uses interpolated normals for a smooth lighting effect.
+*/
+class GouraudShader : public FragmentShader {
+
+    Vec3f lightDirection;
+
     public:
-        FlatLightingShader(Vec3f lightDirection) : lightDirection(lightDirection) {}
+
+        GouraudShader(Vec3f lightDirection) : lightDirection(lightDirection) {}
 
         BMPColor shade(FragmentShaderInput in) {
             float intensity = in.normal * lightDirection;
+            intensity = std::max(intensity, 0.f);
+
             return BMPColor(in.color.r * intensity, in.color.g * intensity, in.color.b * intensity, in.color.a);
         }
 };

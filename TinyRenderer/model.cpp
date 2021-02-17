@@ -41,6 +41,13 @@ Model::Model(const char* filename) : verts_(), faces_() {
             for (int i = 0; i < 3; i++) iss >> uv[i]; 
             uvs_.push_back(uv);
         }
+        else if (!line.compare(0, 4, "vn  ")) {  // vn  0.001 0.482 -0.876
+            Vec3f normal;
+            iss >> trash >> trash;
+
+            for (int i = 0; i < 3; i++) iss >> normal[i];
+            normals_.push_back(normal);
+        }  
     }
     std::cerr << "# v# " << verts_.size() << " f# " << faces_.size() << std::endl;
 }
@@ -70,4 +77,8 @@ std::vector<int> Model::face_uv_indices(int idx) {
 
 Vec3f Model::uv(int i) {
     return uvs_[i];
+}
+
+Vec3f Model::normal(int i) {
+    return normals_[i];
 }

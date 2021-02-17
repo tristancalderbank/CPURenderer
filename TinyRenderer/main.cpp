@@ -4,11 +4,11 @@
 #include <math.h>
 #include <cstdlib>
 #include <iostream>
+#include "geometry.h"
 #include "bmpimage.h"
 #include "line.h"
 #include "model.h"
 #include "triangle.h"
-#include "geometry.h"
 #include "shader.h"
 #include "zbuffer.h"
 #include <string>
@@ -37,6 +37,14 @@ Matrix rotationMatrixY(double angle) {
     return matrix;
 }
 
+/*
+  Notes:
+
+  * positive z-axis is towards viewer by convention.
+
+  Flat lighting shader makes sense, light is facing -1 z which is into the screen, gouraud one doesn't make sense
+
+*/
 int main(int argc, char** argv) {
 
     // rendering data structures
@@ -63,64 +71,68 @@ int main(int argc, char** argv) {
 
     // shaders 
     ColorShader colorShader = ColorShader(white);
-    FlatLightingShader flatLightingShader = FlatLightingShader(Vec3f(0, 0, -1));
+    FlatLightingShader flatLightingShader = FlatLightingShader(Vec3f(0, 0, 1));
+    GouraudShader gouraudShader = GouraudShader(Vec3f(0, 0, 1)); // figure out why this direction is wrong
     TextureShader textureShader = TextureShader(modelTexture);
 
     std::vector<FragmentShader*> shaders;
 
-    //shaders.push_back(&colorShader);
+    shaders.push_back(&colorShader);
     shaders.push_back(&textureShader);
-    shaders.push_back(&flatLightingShader);
+    // shaders.push_back(&flatLightingShader);
+    shaders.push_back(&gouraudShader);
 
     // the render loop
     for (int i = 0; i < model->nfaces(); i++) {
-        std::vector<int> face = model->face(i);
+        Triangle triangle;
+
+        std::vector<int> faceVertexIndices = model->face(i);
         std::vector<int> faceUvIndices = model->face_uv_indices(i);
 
-        Vec3f faceWorldCoordinates[3];
-        Vec3f faceScreenCoordnates[3];
-        Vec3f faceUvCoordinates[3];
-
         for (int j = 0; j < 3; j++) {
+            Vertex vertex;
 
-            faceWorldCoordinates[j] = model->vert(face[j]);
-            faceUvCoordinates[j] = model->uv(faceUvIndices[j]);
+            vertex.worldCoordinates = model->vert(faceVertexIndices[j]);
+            vertex.uvCoordinates = model->uv(faceUvIndices[j]);
+            vertex.normal = model->normal(faceVertexIndices[j]);
 
             // convert to homogenous coordinates
             Vec4f faceWorldCoordinatesHomogenous;
 
-            faceWorldCoordinatesHomogenous[0] = faceWorldCoordinates[j].x;
-            faceWorldCoordinatesHomogenous[1] = faceWorldCoordinates[j].y;
-            faceWorldCoordinatesHomogenous[2] = faceWorldCoordinates[j].z;
+            faceWorldCoordinatesHomogenous[0] = vertex.worldCoordinates.x;
+            faceWorldCoordinatesHomogenous[1] = vertex.worldCoordinates.y;
+            faceWorldCoordinatesHomogenous[2] = vertex.worldCoordinates.z;
             faceWorldCoordinatesHomogenous[3] = 1.0;
 
             // apply perspective transform to world coordinates
             faceWorldCoordinatesHomogenous = perspectiveMatrix * faceWorldCoordinatesHomogenous;
 
             // apply perspective divide (divide by W) to convert out of homogenous coordinates
-            faceWorldCoordinates[j][0] = faceWorldCoordinatesHomogenous[0] / faceWorldCoordinatesHomogenous[3];
-            faceWorldCoordinates[j][1] = faceWorldCoordinatesHomogenous[1] / faceWorldCoordinatesHomogenous[3];
-            faceWorldCoordinates[j][2] = faceWorldCoordinatesHomogenous[2] / faceWorldCoordinatesHomogenous[3];
+            vertex.worldCoordinates[0] = faceWorldCoordinatesHomogenous[0] / faceWorldCoordinatesHomogenous[3];
+            vertex.worldCoordinates[1] = faceWorldCoordinatesHomogenous[1] / faceWorldCoordinatesHomogenous[3];
+            vertex.worldCoordinates[2] = faceWorldCoordinatesHomogenous[2] / faceWorldCoordinatesHomogenous[3];
 
             // vertex coordinates are floating point between -1 to 1
             // add one to make it between 0 to 2
             // calculate the fraction of 2.0 and multiply by either width/height
-            int x = ((faceWorldCoordinates[j].x + 1) / 2.0) * width * 3.0 / 4.0 + width / 8.0;
-            int y = ((faceWorldCoordinates[j].y + 1) / 2.0) * height * 3.0 / 4.0 + height / 8.0;
+            int x = ((vertex.worldCoordinates.x + 1) / 2.0) * width * 3.0 / 4.0 + width / 8.0;
+            int y = ((vertex.worldCoordinates.y + 1) / 2.0) * height * 3.0 / 4.0 + height / 8.0;
 
-            faceScreenCoordnates[j] = Vec3f(x, y, faceWorldCoordinates[j].z);
+            vertex.screenCoordinates = Vec3f(x, y, vertex.worldCoordinates.z);
+
+            triangle.vertices[j] = vertex;
         }
 
         // get normal vector of the face
-        Vec3f normal = cross(faceWorldCoordinates[2] - faceWorldCoordinates[0], faceWorldCoordinates[1] - faceWorldCoordinates[0]);
-        normal.normalize();
+        triangle.normal = cross(triangle.vertices[1].worldCoordinates - triangle.vertices[0].worldCoordinates, triangle.vertices[2].worldCoordinates - triangle.vertices[0].worldCoordinates);
+        triangle.normal.normalize();
 
         // backface culling, skip faces that are oriented away from camera
-        if ((normal * cameraDirection) <= 0) {
+        if ((triangle.normal * cameraDirection) > 0) { // negative value here means camera and surface are pointing towards each other
             continue;
         }
 
-        rasterize(faceScreenCoordnates[0], faceScreenCoordnates[1], faceScreenCoordnates[2], faceUvCoordinates, normal, frameBuffer, zBuffer, shaders);
+        rasterize(triangle, frameBuffer, zBuffer, shaders);
     }
 
     // output images

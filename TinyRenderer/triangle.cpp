@@ -3,6 +3,7 @@
 #include "line.h"
 #include "triangle.h"
 #include "shader.h"
+#include "geometry.h"
 
 bool pointInTriangle(Vec3f barycentricCoordinates) {
     return !(barycentricCoordinates.x < 0 || barycentricCoordinates.y < 0 || barycentricCoordinates.z < 0);
@@ -37,8 +38,11 @@ bool pointOutsideImage(int x, int y, int width, int height) {
     return (x < 0 || y < 0 || x > width || y > height);
 }
 
-void rasterize(Vec3f p0, Vec3f p1, Vec3f p2, Vec3f uvCoordinates[3], Vec3f normal, BMPImage& image, float* zBuffer, std::vector<FragmentShader*> shaders) {
-    
+void rasterize(Triangle triangle, BMPImage& image, float* zBuffer, std::vector<FragmentShader*> shaders) {
+    Vec3f p0 = triangle.vertices[0].screenCoordinates;
+    Vec3f p1 = triangle.vertices[1].screenCoordinates;
+    Vec3f p2 = triangle.vertices[2].screenCoordinates;
+
     // discard degenerate triangles
     if (p0.y == p1.y && p0.y == p2.y) {
         return;
@@ -70,11 +74,19 @@ void rasterize(Vec3f p0, Vec3f p1, Vec3f p2, Vec3f uvCoordinates[3], Vec3f norma
                 if (z > zBuffer[x + y * width]) {
                     FragmentShaderInput input;
 
-                    input.normal = normal;
+                    input.surfaceNormal = triangle.normal;
+
+                    input.normal = Vec3f(
+                        triangle.vertices[0].normal.x * barycentricCoordinates.x + triangle.vertices[1].normal.x * barycentricCoordinates.y + triangle.vertices[2].normal.x * barycentricCoordinates.z,
+                        triangle.vertices[0].normal.y * barycentricCoordinates.x + triangle.vertices[1].normal.y * barycentricCoordinates.y + triangle.vertices[2].normal.y * barycentricCoordinates.z,
+                        triangle.vertices[0].normal.z * barycentricCoordinates.x + triangle.vertices[1].normal.z * barycentricCoordinates.y + triangle.vertices[2].normal.z * barycentricCoordinates.z
+                    );
+
+                    input.normal.normalize();
 
                     input.uvCoordinates = Vec2f(
-                        uvCoordinates[0].x * barycentricCoordinates.x + uvCoordinates[1].x * barycentricCoordinates.y + uvCoordinates[2].x * barycentricCoordinates.z,
-                        uvCoordinates[0].y * barycentricCoordinates.x + uvCoordinates[1].y * barycentricCoordinates.y + uvCoordinates[2].y * barycentricCoordinates.z
+                        triangle.vertices[0].uvCoordinates.x * barycentricCoordinates.x + triangle.vertices[1].uvCoordinates.x * barycentricCoordinates.y + triangle.vertices[2].uvCoordinates.x * barycentricCoordinates.z,
+                        triangle.vertices[0].uvCoordinates.y * barycentricCoordinates.x + triangle.vertices[1].uvCoordinates.y * barycentricCoordinates.y + triangle.vertices[2].uvCoordinates.y * barycentricCoordinates.z
                     );
 
                     for (auto shader : shaders) {
@@ -83,15 +95,6 @@ void rasterize(Vec3f p0, Vec3f p1, Vec3f p2, Vec3f uvCoordinates[3], Vec3f norma
 
                     image.set(x, y, input.color);
                     zBuffer[x + y * width] = z;
-
-                    //// output the current image
-                    //if ((frame > 11000 && frame < 12000 && frame % 2 == 0) || (frame % 100 == 0)) {
-                    //    std::string imageFileName = "video/";
-                    //    imageFileName += std::to_string(frame);
-                    //    imageFileName += ".bmp";
-                    //    image.save(&imageFileName[0]);
-                    //}
-                    //frame++;
                 }
             }
         }
