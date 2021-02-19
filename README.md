@@ -123,3 +123,11 @@ So far for lighting calculations we've just been using the normal of each triang
 The result: 
 
 <img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/texture_gouraud.PNG" width="400">
+
+### Moving the camera
+
+At this point we just assume the camera is sitting in a fixed position, staring down the negative Z-axis.
+
+To move the camera we basically just pick a new coordinate frame for the camera position, then do some linear algebra magic to convert the "world" coordinates into the frame of the camera. Once you do that the calculations are all the same as before and you end up still looking down the negative Z-axis but in a different coordinate frame.
+
+<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/camera.PNG" width="400">
