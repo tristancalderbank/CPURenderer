@@ -219,7 +219,7 @@ typedef vec<4, float> Vec4f;
 typedef mat<4, 4, float> Matrix;
 
 struct Vertex {
-    Vec3f worldCoordinates;
+    Vec3f clipCoordinates;
     Vec3f screenCoordinates;
     Vec3f uvCoordinates;
     Vec3f normal;

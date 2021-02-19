@@ -123,6 +123,8 @@ int main(int argc, char** argv) {
     Matrix viewport = viewportMatrix(width / 8.0, height / 8.0, width * 3.0 / 4.0, height * 3.0 / 4.0);
 
     // model/texture
+    Matrix modelMatrix = identityMatrix();
+
     Model* model = new Model("obj/african_head.obj");
     TGAImage modelTexture = TGAImage();
     modelTexture.read_tga_file("texture/african_head_diffuse.tga");
@@ -151,33 +153,32 @@ int main(int argc, char** argv) {
         for (int j = 0; j < 3; j++) {
             Vertex vertex;
 
-            vertex.worldCoordinates = model->vert(faceVertexIndices[j]);
             vertex.uvCoordinates = model->uv(faceUvIndices[j]);
             vertex.normal = model->normal(faceVertexIndices[j]);
 
-            // convert to homogenous coordinates
-            Vec4f faceWorldCoordinatesHomogenous;
+            Vec3f modelCoordinates = model->vert(faceVertexIndices[j]);
+            Vec4f modelCoordinatesHomogenous;
+            modelCoordinatesHomogenous[0] = modelCoordinates.x;
+            modelCoordinatesHomogenous[1] = modelCoordinates.y;
+            modelCoordinatesHomogenous[2] = modelCoordinates.z;
+            modelCoordinatesHomogenous[3] = 1.0;
 
-            faceWorldCoordinatesHomogenous[0] = vertex.worldCoordinates.x;
-            faceWorldCoordinatesHomogenous[1] = vertex.worldCoordinates.y;
-            faceWorldCoordinatesHomogenous[2] = vertex.worldCoordinates.z;
-            faceWorldCoordinatesHomogenous[3] = 1.0;
+            Vec4f worldCoordinatesHomogenous = modelMatrix * modelCoordinatesHomogenous;
 
             // apply perspective transform to world coordinates
-            faceWorldCoordinatesHomogenous = perspectiveMatrix * view* faceWorldCoordinatesHomogenous;
+            Vec4f clipCoordinatesHomogenous = perspectiveMatrix * view * worldCoordinatesHomogenous;
+
+            clipCoordinatesHomogenous[0] = clipCoordinatesHomogenous[0] / clipCoordinatesHomogenous[3];
+            clipCoordinatesHomogenous[1] = clipCoordinatesHomogenous[1] / clipCoordinatesHomogenous[3];
+            clipCoordinatesHomogenous[2] = clipCoordinatesHomogenous[2] / clipCoordinatesHomogenous[3];
+            clipCoordinatesHomogenous[3] = clipCoordinatesHomogenous[3] / clipCoordinatesHomogenous[3];
 
             // apply perspective divide (divide by W) to convert out of homogenous coordinates
-            vertex.worldCoordinates[0] = faceWorldCoordinatesHomogenous[0] / faceWorldCoordinatesHomogenous[3];
-            vertex.worldCoordinates[1] = faceWorldCoordinatesHomogenous[1] / faceWorldCoordinatesHomogenous[3];
-            vertex.worldCoordinates[2] = faceWorldCoordinatesHomogenous[2] / faceWorldCoordinatesHomogenous[3];
+            vertex.clipCoordinates[0] = clipCoordinatesHomogenous[0];
+            vertex.clipCoordinates[1] = clipCoordinatesHomogenous[1];
+            vertex.clipCoordinates[2] = clipCoordinatesHomogenous[2];
 
-            Vec4f worldCoordinatesHomogenous;
-            worldCoordinatesHomogenous[0] = vertex.worldCoordinates[0];
-            worldCoordinatesHomogenous[1] = vertex.worldCoordinates[1];
-            worldCoordinatesHomogenous[2] = vertex.worldCoordinates[2];
-            worldCoordinatesHomogenous[3] = 1.0;
-
-            Vec4f screen = viewport * worldCoordinatesHomogenous;
+            Vec4f screen = viewport * clipCoordinatesHomogenous;
 
             vertex.screenCoordinates = Vec3f(screen[0], screen[1], screen[2]);
 
@@ -185,7 +186,7 @@ int main(int argc, char** argv) {
         }
 
         // get normal vector of the face
-        triangle.normal = cross(triangle.vertices[1].worldCoordinates - triangle.vertices[0].worldCoordinates, triangle.vertices[2].worldCoordinates - triangle.vertices[0].worldCoordinates);
+        triangle.normal = cross(triangle.vertices[1].clipCoordinates - triangle.vertices[0].clipCoordinates, triangle.vertices[2].clipCoordinates - triangle.vertices[0].clipCoordinates);
         triangle.normal.normalize();
 
         // backface culling, skip faces that are oriented away from camera
