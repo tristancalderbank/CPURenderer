@@ -38,7 +38,7 @@ bool pointOutsideImage(int x, int y, int width, int height) {
     return (x < 0 || y < 0 || x > width || y > height);
 }
 
-void rasterize(Triangle triangle, BMPImage& image, float* zBuffer, std::vector<FragmentShader*> shaders) {
+void rasterize(Triangle triangle, BMPImage& image, int* zBuffer, std::vector<FragmentShader*> shaders) {
     Vec3f p0 = triangle.vertices[0].screenCoordinates;
     Vec3f p1 = triangle.vertices[1].screenCoordinates;
     Vec3f p2 = triangle.vertices[2].screenCoordinates;

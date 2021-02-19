@@ -21,6 +21,7 @@ const BMPColor green = BMPColor(0, 255, 0, 255);
 
 const int height = 800;
 const int width = 800;
+const int zBufferDepth = 255;
 
 Matrix rotationMatrixY(double angle) {
     angle = angle / 180 * M_PI;
@@ -37,6 +38,63 @@ Matrix rotationMatrixY(double angle) {
     return matrix;
 }
 
+Matrix identityMatrix() {
+    Matrix matrix;
+
+    for (int i = 0; i < 4; i++) {
+        matrix[i][i] = 1.0;
+    }
+
+    return matrix;
+}
+
+Matrix viewMatrix(Vec3f cameraPos, Vec3f lookAtPoint, Vec3f up) {
+    Vec3f z = (cameraPos - lookAtPoint).normalize(); // z should point towards the camera
+    Vec3f x = cross(up, z).normalize();
+    Vec3f y = cross(z, x).normalize();
+
+    Matrix mInverse = identityMatrix(); // rotates model to lookAtPoint frame orientation
+
+    mInverse[0][0] = x[0]; // x as a row vector
+    mInverse[0][1] = x[1];
+    mInverse[0][2] = x[2];
+
+    mInverse[1][0] = y[0]; // y as a row vector
+    mInverse[1][1] = y[1];
+    mInverse[1][2] = y[2];
+
+    mInverse[2][0] = z[0]; // z as a row vector
+    mInverse[2][1] = z[1];
+    mInverse[2][2] = z[2];
+
+    Matrix translation = identityMatrix(); // shifts model to origin by the difference in origin between the two frames
+
+    translation[3][0] = -lookAtPoint[0];
+    translation[3][1] = -lookAtPoint[1];
+    translation[3][2] = -lookAtPoint[2];
+
+    return mInverse * translation;
+}
+
+// vertex coordinates are floating point between -1 to 1
+// add one to make it between 0 to 2
+// calculate the fraction of 2.0 and multiply by either width/height
+// (x,y) here let us shift the resulting image within the viewport
+// using these only makes sense if we use (w, h) less than the real viewport (w, h), otherwise we'd be shifting it off screen
+Matrix viewportMatrix(int x, int y, int w, int h) {
+    Matrix viewport = identityMatrix();
+
+    viewport[0][0] = w / 2.0;
+    viewport[1][1] = h / 2.0;
+    viewport[2][2] = zBufferDepth / 2.0;
+
+    viewport[0][3] = w / 2.0 + x;
+    viewport[1][3] = h / 2.0 + y;
+    viewport[2][3] = zBufferDepth / 2.0;
+
+    return viewport;
+}
+
 /*
   Notes:
 
@@ -49,19 +107,20 @@ int main(int argc, char** argv) {
 
     // rendering data structures
     BMPImage frameBuffer(height, width, 3);
-    float* zBuffer = initZBuffer(frameBuffer.getWidth(), frameBuffer.getHeight());
+    int* zBuffer = initZBuffer(frameBuffer.getWidth(), frameBuffer.getHeight());
 
     // camera
-    Vec3f cameraDirection = Vec3f(0, 0, -1);
-
-    float cameraPlaneDistance = 3.0;
-    Matrix perspectiveMatrix;
-
-    perspectiveMatrix[0][0] = 1.0;
-    perspectiveMatrix[1][1] = 1.0;
-    perspectiveMatrix[2][2] = 1.0;
-    perspectiveMatrix[3][3] = 1.0;
+    float cameraPlaneDistance = 10.0;
+    Matrix perspectiveMatrix = identityMatrix();
     perspectiveMatrix[3][2] = -1.0 / cameraPlaneDistance;
+
+    Vec3f up = Vec3f(0, 1, 0);
+    Vec3f cameraPos = Vec3f(1, 1, 1);
+    Vec3f lookAtPoint = Vec3f(0, 0, 0);
+    Vec3f cameraDirection = Vec3f(0, 0, -1); // camera is always looking down -Z axis
+
+    Matrix view = viewMatrix(cameraPos, lookAtPoint, up);
+    Matrix viewport = viewportMatrix(width / 8.0, height / 8.0, width * 3.0 / 4.0, height * 3.0 / 4.0);
 
     // model/texture
     Model* model = new Model("obj/african_head.obj");
@@ -72,7 +131,7 @@ int main(int argc, char** argv) {
     // shaders 
     ColorShader colorShader = ColorShader(white);
     FlatLightingShader flatLightingShader = FlatLightingShader(Vec3f(0, 0, 1));
-    GouraudShader gouraudShader = GouraudShader(Vec3f(0, 0, 1)); // figure out why this direction is wrong
+    GouraudShader gouraudShader = GouraudShader(Vec3f(0, -1, 0));
     TextureShader textureShader = TextureShader(modelTexture);
 
     std::vector<FragmentShader*> shaders;
@@ -80,7 +139,7 @@ int main(int argc, char** argv) {
     shaders.push_back(&colorShader);
     shaders.push_back(&textureShader);
     // shaders.push_back(&flatLightingShader);
-    shaders.push_back(&gouraudShader);
+    // shaders.push_back(&gouraudShader);
 
     // the render loop
     for (int i = 0; i < model->nfaces(); i++) {
@@ -105,20 +164,22 @@ int main(int argc, char** argv) {
             faceWorldCoordinatesHomogenous[3] = 1.0;
 
             // apply perspective transform to world coordinates
-            faceWorldCoordinatesHomogenous = perspectiveMatrix * faceWorldCoordinatesHomogenous;
+            faceWorldCoordinatesHomogenous = perspectiveMatrix * view* faceWorldCoordinatesHomogenous;
 
             // apply perspective divide (divide by W) to convert out of homogenous coordinates
             vertex.worldCoordinates[0] = faceWorldCoordinatesHomogenous[0] / faceWorldCoordinatesHomogenous[3];
             vertex.worldCoordinates[1] = faceWorldCoordinatesHomogenous[1] / faceWorldCoordinatesHomogenous[3];
             vertex.worldCoordinates[2] = faceWorldCoordinatesHomogenous[2] / faceWorldCoordinatesHomogenous[3];
 
-            // vertex coordinates are floating point between -1 to 1
-            // add one to make it between 0 to 2
-            // calculate the fraction of 2.0 and multiply by either width/height
-            int x = ((vertex.worldCoordinates.x + 1) / 2.0) * width * 3.0 / 4.0 + width / 8.0;
-            int y = ((vertex.worldCoordinates.y + 1) / 2.0) * height * 3.0 / 4.0 + height / 8.0;
+            Vec4f worldCoordinatesHomogenous;
+            worldCoordinatesHomogenous[0] = vertex.worldCoordinates[0];
+            worldCoordinatesHomogenous[1] = vertex.worldCoordinates[1];
+            worldCoordinatesHomogenous[2] = vertex.worldCoordinates[2];
+            worldCoordinatesHomogenous[3] = 1.0;
 
-            vertex.screenCoordinates = Vec3f(x, y, vertex.worldCoordinates.z);
+            Vec4f screen = viewport * worldCoordinatesHomogenous;
+
+            vertex.screenCoordinates = Vec3f(screen[0], screen[1], screen[2]);
 
             triangle.vertices[j] = vertex;
         }
