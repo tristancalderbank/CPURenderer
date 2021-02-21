@@ -218,16 +218,7 @@ typedef vec<3, int>   Vec3i;
 typedef vec<4, float> Vec4f;
 typedef mat<4, 4, float> Matrix;
 
-struct Vertex {
-    Vec3f clipCoordinates;
-    Vec3f screenCoordinates;
-    Vec3f uvCoordinates;
-    Vec3f normal;
-};
-
-struct Triangle {
-    Vertex vertices[3];
-    Vec3f normal; // face normal
-};
+Vec3f vec4fToVec3f(Vec4f v);
+Vec4f vec3fToVec4fPoint(Vec3f v);
 
 #endif //__GEOMETRY_H__

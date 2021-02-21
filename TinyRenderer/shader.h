@@ -1,90 +1,9 @@
 #pragma once
 
 #include "bmpimage.h"
-#include "tgaimage.h"
 #include "geometry.h"
 
-// interpolated fragment values
-struct FragmentShaderInput {
-    BMPColor color;
-    Vec3f normal;
-    Vec3f surfaceNormal;
-    Vec2f uvCoordinates;
-
-    FragmentShaderInput() {}
-};
-
-// Acts on individual pixels of a triangle
-// aka Pixel Shader
-class FragmentShader {
-    public:
-        virtual BMPColor shade(FragmentShaderInput in) = 0;
-};
-
-// Child classes
-class ColorShader : public FragmentShader {
-
-    BMPColor color;
-
-public:
-    ColorShader(BMPColor color) : color(color) {}
-
-    BMPColor shade(FragmentShaderInput in) {
-        return color;
-    }
-};
-
-/*
-    Lighting shader which uses the surface normal of the triangle.
-*/
-class FlatLightingShader : public FragmentShader {
-
-    Vec3f lightDirection;
-
-public:
-
-    FlatLightingShader(Vec3f lightDirection) : lightDirection(lightDirection) {}
-
-    BMPColor shade(FragmentShaderInput in) {
-        float intensity = in.surfaceNormal * lightDirection;
-        intensity = std::max(intensity, 0.f);
-
-        return BMPColor(in.color.r * intensity, in.color.g * intensity, in.color.b * intensity, in.color.a);
-    }
-};
-
-/*
-    Lighting shader that uses interpolated normals for a smooth lighting effect.
-*/
-class GouraudShader : public FragmentShader {
-
-    Vec3f lightDirection;
-
-    public:
-
-        GouraudShader(Vec3f lightDirection) : lightDirection(lightDirection) {}
-
-        BMPColor shade(FragmentShaderInput in) {
-            float intensity = in.normal * lightDirection;
-            intensity = std::max(intensity, 0.f);
-
-            return BMPColor(in.color.r * intensity, in.color.g * intensity, in.color.b * intensity, in.color.a);
-        }
-};
-
-class TextureShader : public FragmentShader {
-
-    TGAImage texture;
-
-public:
-    TextureShader(TGAImage texture) : texture(texture) {}
-
-    BMPColor shade(FragmentShaderInput in) {
-        int textureX = in.uvCoordinates.x * texture.get_width();
-        int textureY = in.uvCoordinates.y * texture.get_height();
-
-        TGAColor textureColor = texture.get(textureX, textureY);
-
-        return BMPColor(textureColor.r, textureColor.g, textureColor.b, textureColor.a);
-    }
+struct IShader {
+    virtual Vec4f vertex(int iface, int nthvert) = 0;
+    virtual bool fragment(Vec3f bar, BMPColor& color) = 0;
 };

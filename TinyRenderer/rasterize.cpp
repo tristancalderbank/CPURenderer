@@ -1,9 +1,44 @@
 #include <vector>
 #include <string>
-#include "line.h"
-#include "triangle.h"
+#include "rasterize.h"
 #include "shader.h"
 #include "geometry.h"
+
+void line(int x0, int y0, int x1, int y1, BMPImage& image, BMPColor color) {
+    // the number of points to draw is the max of dx, dy
+    int dx = std::abs(x1 - x0);
+    int dy = std::abs(y1 - y0);
+
+    // tells whether to iterate forward/backward 
+    int xDirection = x1 > x0 ? 1 : -1;
+    int yDirection = y1 > y0 ? 1 : -1;
+
+    // use the bigger diff to make sure we fill in the whole line
+    if (dx > dy) {
+        for (int x = x0; x != (x1 + xDirection); x += xDirection) {
+            // calculate percent of the total dx, avoid dividing by zero
+            float percent = dx == 0 ? 0 : (float)(std::abs(x - x0)) / (float)(dx);
+
+            // calculate the equivalent pixel on the y-axis of the line for this percentage
+            int y = y0 + (dy * percent) * yDirection;
+            image.set(x, y, color);
+        }
+    }
+    else {
+        for (int y = y0; y != (y1 + yDirection); y += yDirection) {
+            // calculate percent of the total dy, avoid dividing by zero
+            float percent = dy == 0 ? 0 : (float)(std::abs(y - y0)) / (float)(dy);
+
+            // calculate the equivalent pixel on the x-axis of the line for this percentage
+            int x = x0 + (dx * percent) * xDirection;
+            image.set(x, y, color);
+        }
+    }
+}
+
+void line(Vec2i p0, Vec2i p1, BMPImage& image, BMPColor color) {
+    line(p0.x, p0.y, p1.x, p1.y, image, color);
+}
 
 bool pointInTriangle(Vec3f barycentricCoordinates) {
     return !(barycentricCoordinates.x < 0 || barycentricCoordinates.y < 0 || barycentricCoordinates.z < 0);
@@ -38,10 +73,10 @@ bool pointOutsideImage(int x, int y, int width, int height) {
     return (x < 0 || y < 0 || x > width || y > height);
 }
 
-void rasterize(Triangle triangle, BMPImage& image, int* zBuffer, std::vector<FragmentShader*> shaders) {
-    Vec3f p0 = triangle.vertices[0].screenCoordinates;
-    Vec3f p1 = triangle.vertices[1].screenCoordinates;
-    Vec3f p2 = triangle.vertices[2].screenCoordinates;
+void rasterize(Vec3f screenCoordinates[], BMPImage& image, int* zBuffer, IShader &shader) {
+    Vec3f p0 = screenCoordinates[0];
+    Vec3f p1 = screenCoordinates[1];
+    Vec3f p2 = screenCoordinates[2];
 
     // discard degenerate triangles
     if (p0.y == p1.y && p0.y == p2.y) {
@@ -72,28 +107,11 @@ void rasterize(Triangle triangle, BMPImage& image, int* zBuffer, std::vector<Fra
                 float z = p0.z * barycentricCoordinates.x + p1.z * barycentricCoordinates.y + p2.z * barycentricCoordinates.z;
 
                 if (z > zBuffer[x + y * width]) {
-                    FragmentShaderInput input;
+                    BMPColor color;
 
-                    input.surfaceNormal = triangle.normal;
+                    shader.fragment(barycentricCoordinates, color);
 
-                    input.normal = Vec3f(
-                        triangle.vertices[0].normal.x * barycentricCoordinates.x + triangle.vertices[1].normal.x * barycentricCoordinates.y + triangle.vertices[2].normal.x * barycentricCoordinates.z,
-                        triangle.vertices[0].normal.y * barycentricCoordinates.x + triangle.vertices[1].normal.y * barycentricCoordinates.y + triangle.vertices[2].normal.y * barycentricCoordinates.z,
-                        triangle.vertices[0].normal.z * barycentricCoordinates.x + triangle.vertices[1].normal.z * barycentricCoordinates.y + triangle.vertices[2].normal.z * barycentricCoordinates.z
-                    );
-
-                    input.normal.normalize();
-
-                    input.uvCoordinates = Vec2f(
-                        triangle.vertices[0].uvCoordinates.x * barycentricCoordinates.x + triangle.vertices[1].uvCoordinates.x * barycentricCoordinates.y + triangle.vertices[2].uvCoordinates.x * barycentricCoordinates.z,
-                        triangle.vertices[0].uvCoordinates.y * barycentricCoordinates.x + triangle.vertices[1].uvCoordinates.y * barycentricCoordinates.y + triangle.vertices[2].uvCoordinates.y * barycentricCoordinates.z
-                    );
-
-                    for (auto shader : shaders) {
-                        input.color = shader->shade(input);
-                    }
-
-                    image.set(x, y, input.color);
+                    image.set(x, y, color);
                     zBuffer[x + y * width] = z;
                 }
             }
