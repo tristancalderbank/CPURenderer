@@ -35,10 +35,12 @@ Model::Model(const char* filename) : verts_(), faces_() {
             face_uv_indices_.push_back(face_uv_idx);
         }
         else if (!line.compare(0, 4, "vt  ")) { // vt  0.532 0.923 0.000 format: (u/v/...)
-            Vec3f uv;
+            Vec2f uv;
             iss >> trash >> trash;
 
-            for (int i = 0; i < 3; i++) iss >> uv[i]; 
+            for (int i = 0; i < 2; i++) iss >> uv[i]; 
+
+            iss >> trash; // trash the trailing zero
             uvs_.push_back(uv);
         }
         else if (!line.compare(0, 4, "vn  ")) {  // vn  0.001 0.482 -0.876
@@ -75,7 +77,7 @@ std::vector<int> Model::face_uv_indices(int idx) {
     return face_uv_indices_[idx];
 }
 
-Vec3f Model::uv(int i) {
+Vec2f Model::uv(int i) {
     return uvs_[i];
 }
 

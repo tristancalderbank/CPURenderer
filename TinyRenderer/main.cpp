@@ -22,7 +22,6 @@ const BMPColor green = BMPColor(0, 255, 0, 255);
 
 const int height = 800;
 const int width = 800;
-Model* model;
 
 Matrix ModelView;
 Matrix Viewport;
@@ -30,22 +29,43 @@ Matrix Projection;
 
 struct Shader:public IShader {
 
+private:
+    Model* model;
+    TGAImage* texture;
+
+public:
+    Shader(Model* m, TGAImage* t) {
+        model = m;
+        texture = t;
+    }
+
     Vec3f lightDirection = Vec3f(0, 0, 1);
-    Vec3f varying_intensity; // written by vertex shader, read by fragment shader
+    Vec3f varyingIntensity; // written by vertex shader, read by fragment shader
+    mat<2, 3, float> varyingUv;
 
     // output should be clip-space coordinates, before perspective-divide (hardware will do the divide/viewport transform)
-    virtual Vec4f vertex(int iface, int nthvert) {
-        Vec3f modelCoordinates = model->vert(model->face(iface)[nthvert]); // read the vertex from .obj file
+    virtual Vec4f vertex(int faceIndex, int vertIndex) {
+        Vec3f modelCoordinates = model->vert(model->face(faceIndex)[vertIndex]); // read the vertex from .obj file
+
+        Vec2f uvCoordinates = model->uv(model->face_uv_indices(faceIndex)[vertIndex]); // read the UV coordinates from the .obj file
+        varyingUv.set_col(vertIndex, uvCoordinates);
+
         Vec4f gl_Vertex = vec3fToVec4fPoint(modelCoordinates);
 
-        varying_intensity[nthvert] = std::max(0.f, model->normal(model->face(iface)[nthvert]) * lightDirection); // get diffuse lighting intensity
+        varyingIntensity[vertIndex] = std::max(0.f, model->normal(model->face(faceIndex)[vertIndex]) * lightDirection); // get diffuse lighting intensity
 
         return Projection * ModelView * gl_Vertex;
     }
-
+    
     virtual bool fragment(Vec3f barycentricCoodinates, BMPColor& color) {
-        float intensity = varying_intensity * barycentricCoodinates;
-        color = BMPColor(255 * intensity, 255 * intensity, 255 * intensity, 255);
+        Vec2f uv = varyingUv * barycentricCoodinates;
+        int textureX = uv.x * texture->get_width();
+        int textureY = uv.y * texture->get_height();
+        TGAColor textureColor = texture->get(textureX, textureY);
+
+        float intensity = varyingIntensity * barycentricCoodinates;
+
+        color = BMPColor(textureColor.r * intensity, textureColor.g * intensity, textureColor.b * intensity, 255);
         return false; // do not discard pixel
     }
 };
@@ -57,6 +77,9 @@ Vec4f perspectiveDivide(Vec4f v) {
     return v;
 }
 
+/*
+Current Goal: make textures work with current shader
+*/
 int main(int argc, char** argv) {
 
     // rendering data structures
@@ -76,13 +99,13 @@ int main(int argc, char** argv) {
     Viewport = viewportMatrix(width / 8.0, height / 8.0, width * 3.0 / 4.0, height * 3.0 / 4.0);
 
     // model/texture
-    model = new Model("obj/african_head.obj");
+    Model* model = new Model("obj/african_head.obj");
     TGAImage modelTexture = TGAImage();
     modelTexture.read_tga_file("texture/african_head_diffuse.tga");
     modelTexture.flip_vertically();
 
     // shader
-    Shader shader;
+    Shader shader = Shader(model, &modelTexture);
 
     // the render loop
     for (int i = 0; i < model->nfaces(); i++) {
