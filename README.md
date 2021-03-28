@@ -118,7 +118,7 @@ To get this effect you can essentially just divide the x/y coordinates of a vert
 
 ### Phong Shading (Interpolated Normals)
 
-So far for lighting calculations we've just been using the normal of each triangle surface to calculate intensity (normal dotted with light vector). In reality the model we're using actually has normal values for every vertex of each triangle. To get a smoother lighting effect we can take these vertex normals and interpolated them (using our barycentric coordinates) over the whole triangle when we do our fragment shading. This is called [Gouaraud shading](https://en.wikipedia.org/wiki/Gouraud_shading).
+So far for lighting calculations we've just been using the normal of each triangle surface to calculate intensity (normal dotted with light vector). In reality the model we're using actually has normal values for every vertex of each triangle. To get a smoother lighting effect we can take these vertex normals and interpolated them (using our barycentric coordinates) over the whole triangle when we do our fragment shading. This is called [Phong shading](https://en.wikipedia.org/wiki/Phong_shading).
 
 The result: 
 
