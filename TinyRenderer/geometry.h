@@ -220,5 +220,6 @@ typedef mat<4, 4, float> Matrix;
 
 Vec3f vec4fToVec3f(Vec4f v);
 Vec4f vec3fToVec4fPoint(Vec3f v);
+Vec4f vec3fToVec4fVector(Vec3f v);
 
 #endif //__GEOMETRY_H__
