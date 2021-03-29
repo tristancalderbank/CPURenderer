@@ -131,3 +131,21 @@ At this point we just assume the camera is sitting in a fixed position, staring 
 To move the camera we basically just pick a new coordinate frame for the camera position, then do some linear algebra magic to convert the "world" coordinates into the frame of the camera. Once you do that the calculations are all the same as before and you end up still looking down the negative Z-axis but in a different coordinate frame.
 
 <img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/camera.PNG" width="400">
+
+### Normal Mapping (Bump Mapping)
+
+There's this thing called Normal Mapping or Bump Mapping. Its basically a trick for adding geometric/bumpy details to a model without actually using any polygons.
+
+The idea is you have a texture that is mapped onto the model similar to a normal texture, but the RGB value are instead "normal vector" xyz values of the model. Meaning a flat triangle can have additional "bump" detail added to it in the form of normal vector information.
+
+Basically when you do a lighting calculation (light vector dotted with surface normal vector) you look up the normal vector for that spot on the model and instead use that for the calculation.
+
+When an artist creates the model they might work on an actual high polygon version, but then instead of exporting it as geometry, they export a low poly version with a normal map to go with it.
+
+Before:
+
+<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/normal_before.PNG" width="400">
+
+After:
+
+<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/normal_after.PNG" width="400">
