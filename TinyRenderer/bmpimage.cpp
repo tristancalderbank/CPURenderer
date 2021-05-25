@@ -100,6 +100,13 @@ void BMPImage::save(char* fileName) {
     generateBitmapImage((unsigned char*)data, height, width, fileName);
 }
 
+BMPColor BMPImage::get(int x, int y) {
+    if (!data || x < 0 || y < 0 || x >= width || y >= height) {
+        return BMPColor();
+    }
+    return BMPColor(data + (x + y * width) * BYTES_PER_PIXEL, BYTES_PER_PIXEL);
+}
+
 void BMPImage::set(int x, int y, BMPColor color) {
     // ignore pixels exactly on the positive boundaries 
     if (x >= width || y >= height || x < 0 || y < 0) {

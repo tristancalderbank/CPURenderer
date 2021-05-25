@@ -49,6 +49,7 @@ public:
 	BMPImage(int width, int height, int bytesPerPixel);
 
 	void save(char* fileName);
+	BMPColor get(int x, int y);
 	void set(int x, int y, BMPColor color);
 	void clear();
 	int getWidth();

@@ -140,18 +140,20 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="bmpimage.cpp" />
+    <ClCompile Include="geometry.cpp" />
     <ClCompile Include="model.cpp" />
-    <ClCompile Include="line.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="tgaimage.cpp" />
-    <ClCompile Include="triangle.cpp" />
+    <ClCompile Include="rasterize.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bmpimage.h" />
     <ClInclude Include="geometry.h" />
-    <ClInclude Include="line.h" />
+    <ClInclude Include="matrix.h" />
+    <ClInclude Include="shader.h" />
     <ClInclude Include="tgaimage.h" />
-    <ClInclude Include="triangle.h" />
+    <ClInclude Include="rasterize.h" />
+    <ClInclude Include="zbuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="model.h" />
