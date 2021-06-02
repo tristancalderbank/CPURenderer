@@ -14,8 +14,9 @@
 #include <string>
 #include "matrix.h"
 
-const int height = 800;
-const int width = 800;
+const int height = 1600;
+const int width = 1600;
+Vec3f mainCameraPos = Vec3f(0, 0, 1);
 
 Matrix ModelView;
 Matrix Viewport;
@@ -33,27 +34,31 @@ struct Shader:public IShader {
 private:
     Model* model;
     TGAImage* texture;
+    TGAImage* specularTexture;
     TGAImage* normalMapTangentTexture;
     BMPImage* shadowMap;
     Matrix screenToShadowScreenMatrix;
 
 public:
-    Shader(Model* m, TGAImage* t, TGAImage* nm, BMPImage* sm, Matrix stssm) {
+    Shader(Model* m, TGAImage* t, TGAImage* st, TGAImage* nm, BMPImage* sm, Matrix stssm) {
         model = m;
         texture = t;
+        specularTexture = st;
         normalMapTangentTexture = nm;
         shadowMap = sm;
         screenToShadowScreenMatrix = stssm;
     }
 
-    Vec3f lightDirection = Vec3f(1, 1, 1).normalize();
+    Vec3f lightDirection = Vec3f(0, 1, 1).normalize();
     Vec3f varyingIntensity;
+    mat<3, 3, float> varyingModelCoordinates;
     mat<3, 3, float> varyingNormal; 
     mat<2, 3, float> varyingUv;
 
     // output should be clip-space coordinates, before perspective-divide (hardware will do the divide/viewport transform)
     virtual Vec4f vertex(int faceIndex, int vertIndex) {
         Vec3f modelCoordinates = model->vert(model->face(faceIndex)[vertIndex]); // read the vertex from .obj file
+        varyingModelCoordinates.set_col(vertIndex, modelCoordinates);
 
         // normal
         Vec3f normal = model->normal(model->face(faceIndex)[vertIndex]); // TODO: transform normals by inverse transpose of Projection * ModelView
@@ -111,21 +116,47 @@ public:
         // transform from normal texture space to world space
         Vec3f textureNormal = (normalTextureToWorldCoordinates * tangentNormal).normalize();
 
-        float intensity = std::min(1.0f, std::max(0.0f, textureNormal * lightDirection + 0.2f));
+        // lighting calculations (Phong) ambient + diffuse + specular
+        float ambient = 5;
+        
+        Vec3f modelCoordinate = varyingModelCoordinates * barycentricCoodinates; // world coords of this fragment
+        Vec3f l = vec4fToVec3f(Projection * ModelView * vec3fToVec4fVector(lightDirection)).normalize();
 
+        float diffuse = std::max(textureNormal * l, 0.0f);
+
+        Vec3f v = (mainCameraPos - modelCoordinate).normalize(); // camera - current point
+        Vec3f r = (textureNormal * (2.0f * (l * textureNormal)) - l).normalize(); // light vector reflected about normal
+        float specularMapValue = specularTexture->get(textureX, textureY).r / 255.0f;
+        float specular = pow(std::max(r * v, 0.0f), 1) * 10;
+        float intensity = diffuse + specularMapValue * specular;
+
+        // shadows
+        
         // check if the shadow camera can see this point, if not, then the point is in a shadow
         Vec4f screenCoordinate = vec3fToVec4fPoint(screenCoordinates * barycentricCoodinates);
         Vec4f screenCoordinateShadow = screenToShadowScreenMatrix * screenCoordinate;
         screenCoordinateShadow = perspectiveDivide(screenCoordinateShadow);
         int screenCoordinateShadowValue = screenCoordinateShadow[2] / zBufferDepth * 255;
         BMPColor shadowMapValue = shadowMap->get(screenCoordinateShadow[0], screenCoordinateShadow[1]);
-
+        
         if (shadowMapValue.r > screenCoordinateShadowValue) {
             // shadow map depth is higher than our depth, meaning there's something blocking this point
-            intensity *= 0.1;
+            intensity *= 0.05;
         }
 
-        color = BMPColor(textureColor.r * intensity, textureColor.g * intensity, textureColor.b * intensity, 255);
+        color = BMPColor(
+            std::min(ambient + textureColor.r * intensity, 255.f),
+            std::min(ambient + textureColor.g * intensity, 255.f),
+            std::min(ambient + textureColor.b * intensity, 255.f),
+            255);
+
+        if (color.r == 168 && color.g == 58 && color.b == 42) {
+            TGAColor speccolor = specularTexture->get(textureX, textureY);
+            float spec1 = v * r;
+            float spec2 = r.z;
+            int stop = 1;
+        }
+
         return false; // do not discard pixel
     }
 };
@@ -213,27 +244,30 @@ int main(int argc, char** argv) {
     modelTexture.read_tga_file("texture/diablo3_pose_diffuse.tga");
     modelTexture.flip_vertically();
 
+    TGAImage specularTexture = TGAImage();
+    specularTexture.read_tga_file("texture/diablo3_pose_spec.tga");
+    specularTexture.flip_vertically();
+
     TGAImage normalMapTangentTexture = TGAImage();
     normalMapTangentTexture.read_tga_file("texture/diablo3_pose_nm_tangent.tga");
     normalMapTangentTexture.flip_vertically();
     
     // render shadow map
-    Vec3f cameraPos = Vec3f(1, 1, 1);
-    ModelView = viewMatrix(cameraPos, lookAtPoint, up);
+    Vec3f shadowCameraPos = Vec3f(0, 1, 1);
+    ModelView = viewMatrix(shadowCameraPos, lookAtPoint, up);
 
     ShadowMapShader shadowMapShader = ShadowMapShader(model);
     draw(model, shadowMapShader, cameraDirection, shadowMapFrameBuffer, shadowMapZBuffer);
     Matrix shadowModelToScreenMatrix = Viewport * Projection * ModelView;
 
     // render main scene
-    cameraPos = Vec3f(0, 0, 1);
-    ModelView = viewMatrix(cameraPos, lookAtPoint, up);
+    ModelView = viewMatrix(mainCameraPos, lookAtPoint, up);
 
     // goes from main scene screen coordinates to shadow screen coordinates
     // works by first moving back to object coordinates then moving to shadow screen coordinates
     Matrix screenToShadowScreenMatrix = shadowModelToScreenMatrix * (Viewport * Projection * ModelView).invert();
 
-    Shader shader = Shader(model, &modelTexture, &normalMapTangentTexture, &shadowMapFrameBuffer, screenToShadowScreenMatrix);
+    Shader shader = Shader(model, &modelTexture, &specularTexture, &normalMapTangentTexture, &shadowMapFrameBuffer, screenToShadowScreenMatrix);
     draw(model, shader, cameraDirection, frameBuffer, zBuffer);
 
     // output images
