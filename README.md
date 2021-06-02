@@ -149,3 +149,35 @@ Before:
 After:
 
 <img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/normal_after.PNG" width="400">
+
+### Specular Mapping
+
+Here we switch to a more complicated lighting model called the Phone Reflection Model. 
+
+It works by modelling the light as consisting of three parts: ambient (constant background light), diffuse (non shiny light), specular (the shiny dot of light you see on shiny objects).
+
+We use another texture called a specular map which tells us which parts of the model are shiny.
+
+<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/specular_map.png" width="600">
+
+Here is the model with just ambient and diffuse light
+
+<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/specular_before.png" width="600">
+
+Adding in the specular light using the specular map texture
+
+<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/specular.png" width="600">
+
+### Shadows
+
+For shadows we basically just do one render pass where the camera is at the position of our light source and save the depth infomation into a texture.
+
+Here is what the "light source camera" sees.
+
+<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/specular.png" width="600">
+
+We then do our regular render pass at our normal camera position but at each point we check if the "light source camera" can see us. 
+
+If not then it means we're in the shadow.
+
+<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/specular.png" width="600">
