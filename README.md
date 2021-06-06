@@ -1,6 +1,18 @@
 # TinyRenderer
 Attempt at implementing the software renderer described here: https://github.com/ssloy/tinyrenderer
 
+Features
+* Full CPU based rasterizer 3D renderer
+* Backface culling
+* Z-buffering
+* Perspective camera
+* Phong lighting model with support for diffuse, normal, and specular textures
+* Shadow mapping
+* Ambient occlusion
+
+<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/shadow.png" width="600">
+<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/aocontrast.png" width="600">
+
 # Progress
 
 ### Points
