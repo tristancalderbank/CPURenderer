@@ -1,8 +1,8 @@
 # TinyRenderer
-Attempt at implementing the software renderer described here: https://github.com/ssloy/tinyrenderer
+
+CPU based rasterizing 3D renderer (based on https://github.com/ssloy/tinyrenderer).
 
 Features
-* Full CPU based rasterizer 3D renderer
 * Backface culling
 * Z-buffering
 * Perspective camera
