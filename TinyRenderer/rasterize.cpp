@@ -73,7 +73,7 @@ bool pointOutsideImage(int x, int y, int width, int height) {
     return (x < 0 || y < 0 || x > width || y > height);
 }
 
-void rasterize(mat<3, 3, float> normalizedDeviceCoordinates, mat<3, 3, float> screenCoordinates, BMPImage& image, int* zBuffer, IShader &shader) {
+void rasterize(mat<3, 3, float> normalizedDeviceCoordinates, mat<3, 3, float> screenCoordinates, BMPImage& image, float* zBuffer, IShader &shader) {
     Vec3f p0 = screenCoordinates.col(0);
     Vec3f p1 = screenCoordinates.col(1);
     Vec3f p2 = screenCoordinates.col(2);
@@ -109,9 +109,10 @@ void rasterize(mat<3, 3, float> normalizedDeviceCoordinates, mat<3, 3, float> sc
                 if (z > zBuffer[x + y * width]) {
                     BMPColor color;
 
-                    shader.fragment(normalizedDeviceCoordinates, screenCoordinates, barycentricCoordinates, color);
+                    shader.fragment(x, y, normalizedDeviceCoordinates, screenCoordinates, barycentricCoordinates, color);
 
                     image.set(x, y, color);
+
                     zBuffer[x + y * width] = z;
                 }
             }

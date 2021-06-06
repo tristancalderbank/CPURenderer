@@ -150,14 +150,20 @@
     <ClInclude Include="bmpimage.h" />
     <ClInclude Include="geometry.h" />
     <ClInclude Include="matrix.h" />
+    <ClInclude Include="occlusion.h" />
     <ClInclude Include="shader.h" />
     <ClInclude Include="tgaimage.h" />
     <ClInclude Include="rasterize.h" />
+    <ClInclude Include="util.h" />
     <ClInclude Include="zbuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="model.h" />
     <None Include="README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\..\..\..\Desktop\ambient\aoregular.png" />
+    <Image Include="..\..\..\..\Desktop\ambient\bitmapImage.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

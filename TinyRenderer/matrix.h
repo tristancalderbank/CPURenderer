@@ -3,7 +3,12 @@
 
 #include "geometry.h"
 
-const int zBufferDepth = 255;
+Vec4f perspectiveDivide(Vec4f v) {
+    for (int i = 0; i < 4; i++) {
+        v[i] = v[i] / v[3];
+    }
+    return v;
+}
 
 Matrix rotationMatrixY(double angle) {
     angle = angle / 180 * M_PI;
@@ -69,17 +74,17 @@ Matrix projectionMatrix(float cameraPlaneDistance) {
 // add one to make it between 0 to 2
 // calculate the fraction of 2.0 and multiply by either width/height
 // (x,y) here let us shift the resulting image within the viewport
-// using these only makes sense if we use (w, h) less than the real viewport (w, h), otherwise we'd be shifting it off screen
+// using these only makes sense if we use (x, y) less than the real viewport (w, h), otherwise we'd be shifting it off screen
 Matrix viewportMatrix(int x, int y, int w, int h) {
     Matrix viewport = identityMatrix();
 
     viewport[0][0] = w / 2.0;
     viewport[1][1] = h / 2.0;
-    viewport[2][2] = zBufferDepth / 2.0;
+    viewport[2][2] = 1;
 
     viewport[0][3] = w / 2.0 + x;
     viewport[1][3] = h / 2.0 + y;
-    viewport[2][3] = zBufferDepth / 2.0;
+    viewport[2][3] = 0;
 
     return viewport;
 }

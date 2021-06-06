@@ -4,6 +4,7 @@
 #include <math.h>
 #include <cstdlib>
 #include <iostream>
+#include <string>
 #include "geometry.h"
 #include "bmpimage.h"
 #include "tgaimage.h"
@@ -11,23 +12,18 @@
 #include "rasterize.h"
 #include "shader.h"
 #include "zbuffer.h"
-#include <string>
 #include "matrix.h"
+#include "occlusion.h"
+#include "util.h"
 
-const int height = 1600;
-const int width = 1600;
-Vec3f mainCameraPos = Vec3f(0, 0, 1);
+const int height = 800;
+const int width = 800;
+Vec3f mainCameraPos = Vec3f(0, 0, 3);
+BMPColor RED = BMPColor(255, 0, 0, 255);
 
 Matrix ModelView;
 Matrix Viewport;
 Matrix Projection;
-
-Vec4f perspectiveDivide(Vec4f v) {
-    for (int i = 0; i < 4; i++) {
-        v[i] = v[i] / v[3];
-    }
-    return v;
-}
 
 struct Shader:public IShader {
 
@@ -36,20 +32,22 @@ private:
     TGAImage* texture;
     TGAImage* specularTexture;
     TGAImage* normalMapTangentTexture;
-    BMPImage* shadowMap;
+    float* zBuffer;
+    float* shadowMap;
     Matrix screenToShadowScreenMatrix;
 
 public:
-    Shader(Model* m, TGAImage* t, TGAImage* st, TGAImage* nm, BMPImage* sm, Matrix stssm) {
+    Shader(Model* m, TGAImage* t, TGAImage* st, TGAImage* nm, float* zb, float* sm, Matrix stssm) {
         model = m;
         texture = t;
         specularTexture = st;
         normalMapTangentTexture = nm;
+        zBuffer = zb;
         shadowMap = sm;
         screenToShadowScreenMatrix = stssm;
     }
 
-    Vec3f lightDirection = Vec3f(0, 1, 1).normalize();
+    Vec3f lightDirection = Vec3f(1, 1, 1).normalize();
     Vec3f varyingIntensity;
     mat<3, 3, float> varyingModelCoordinates;
     mat<3, 3, float> varyingNormal; 
@@ -78,7 +76,7 @@ public:
         return Projection * ModelView * gl_Vertex;
     }
     
-    virtual bool fragment(mat<3, 3, float> normalizedDeviceCoordinates, mat<3, 3, float> screenCoordinates, Vec3f barycentricCoodinates, BMPColor& color) {
+    virtual bool fragment(int fragX, int fragY, mat<3, 3, float> normalizedDeviceCoordinates, mat<3, 3, float> screenCoordinates, Vec3f barycentricCoodinates, BMPColor& color) {
         // uv
         Vec2f uv = varyingUv * barycentricCoodinates;
         int textureX = uv.x * texture->get_width();
@@ -136,38 +134,49 @@ public:
         Vec4f screenCoordinate = vec3fToVec4fPoint(screenCoordinates * barycentricCoodinates);
         Vec4f screenCoordinateShadow = screenToShadowScreenMatrix * screenCoordinate;
         screenCoordinateShadow = perspectiveDivide(screenCoordinateShadow);
-        int screenCoordinateShadowValue = screenCoordinateShadow[2] / zBufferDepth * 255;
-        BMPColor shadowMapValue = shadowMap->get(screenCoordinateShadow[0], screenCoordinateShadow[1]);
-        
-        if (shadowMapValue.r > screenCoordinateShadowValue) {
-            // shadow map depth is higher than our depth, meaning there's something blocking this point
-            intensity *= 0.05;
+
+        float screenCoordinateShadowValue = screenCoordinateShadow[2];
+        int shadowMapIndex = int(screenCoordinateShadow[0]) + int(screenCoordinateShadow[1]) * width;
+        float shadowMapValue = shadowMap[shadowMapIndex];
+
+        float bias = 0.005 * tan(acos(std::min(diffuse, 1.0f))); // cosTheta is dot( n,l ), clamped between 0 and 1
+        float shadow = 1.0;
+        if (shadowMapValue - screenCoordinateShadowValue > 0.1) { // negative farther back in depth
+          // shadow map depth is higher than our depth, meaning there's something blocking this point
+          intensity *= 0.05;
+          shadow = 0.05;
         }
+
+        // ambient occlusion (screen-space)
+        float totalVisibility = 0;
+        for (float angle = 0; angle < (M_PI * 2 - M_PI / 8); angle += M_PI / 4) { // cast 8 rays out from this point
+            // in theory we want solid angle so we do 90 - maxElevationAngle to get the inner FOV seen from this point
+            int dirX = signum(cos(angle));
+            int dirY = signum(sin(angle));
+            float vis = M_PI / 2 - maxElevationAngle(fragX, fragY, dirX, dirY, zBuffer, width, height);
+            totalVisibility += vis;
+        }
+
+        float percentVisibility = totalVisibility / ((M_PI / 2) * 8); // 90 * 8 would be the max field of view
+        percentVisibility = std::pow(percentVisibility, 300.0f); // exponent to increase contrast of final image
 
         color = BMPColor(
-            std::min(ambient + textureColor.r * intensity, 255.f),
-            std::min(ambient + textureColor.g * intensity, 255.f),
-            std::min(ambient + textureColor.b * intensity, 255.f),
+            std::min(ambient + intensity * textureColor.r, 255.f),
+            std::min(ambient + intensity * textureColor.g, 255.f),
+            std::min(ambient + intensity * textureColor.b, 255.f),
             255);
-
-        if (color.r == 168 && color.g == 58 && color.b == 42) {
-            TGAColor speccolor = specularTexture->get(textureX, textureY);
-            float spec1 = v * r;
-            float spec2 = r.z;
-            int stop = 1;
-        }
 
         return false; // do not discard pixel
     }
 };
 
-struct ShadowMapShader :public IShader {
+struct DepthMapShader :public IShader {
 
 private:
     Model* model;
 
 public:
-    ShadowMapShader(Model* m) {
+    DepthMapShader(Model* m) {
         model = m;
     }
 
@@ -178,27 +187,27 @@ public:
         return Projection * ModelView * gl_Vertex;
     }
 
-    virtual bool fragment(mat<3, 3, float> normalizedDeviceCoordinates, mat<3, 3, float> screenCoordinates, Vec3f barycentricCoodinates, BMPColor& color) {
-        Vec3f fragmentScreenCoordinates = screenCoordinates * barycentricCoodinates;
-        
-        float intensity = fragmentScreenCoordinates.z / zBufferDepth;
-        color = BMPColor(255 * intensity, 255 * intensity, 255 * intensity, 255);
-        return false; // do not discard pixel
+    virtual bool fragment(int fragX, int fragY, mat<3, 3, float> normalizedDeviceCoordinates, mat<3, 3, float> screenCoordinates, Vec3f barycentricCoodinates, BMPColor& color) {
+        return true; // don't care about the image buffer, just the zBuffer
     }
 };
 
-void draw(Model* model, IShader& shader, Vec3f cameraDirection, BMPImage frameBuffer, int* zBuffer) {
+void draw(Model* model, IShader& shader, Vec3f cameraDirection, BMPImage frameBuffer, float* zBuffer) {
     // the render loop
     for (int i = 0; i < model->nfaces(); i++) {
+        mat<3, 3, float> clipCoordinates;
         mat<3, 3, float> screenCoordinates;
         mat<3, 3, float> normalizedDeviceCoordinates;
 
+        std::cout << "Draw call: " << (float) i / (float) model->nfaces() * 100 << "%\n";
+
         // run vertex shader
         for (int j = 0; j < 3; j++) {
-            Vec4f clipCoordinates = shader.vertex(i, j);
+            Vec4f clipCoordinate = shader.vertex(i, j);
+            clipCoordinates.set_col(j, vec4fToVec3f(clipCoordinate));
 
             // perspective divide
-            Vec4f ndc = perspectiveDivide(clipCoordinates);
+            Vec4f ndc = perspectiveDivide(clipCoordinate);
             normalizedDeviceCoordinates.set_col(j, vec4fToVec3f(ndc));
 
             // viewport transform
@@ -218,24 +227,22 @@ void draw(Model* model, IShader& shader, Vec3f cameraDirection, BMPImage frameBu
     }
 }
 
-/*
-Current Goal: 
-- add blinn-phong specular stuff
-*/
 int main(int argc, char** argv) {
 
     // rendering data structures
     BMPImage frameBuffer(height, width, 3);
+    BMPImage depthFrameBuffer(height, width, 3);
     BMPImage shadowMapFrameBuffer(height, width, 3);
-    int* zBuffer = initZBuffer(frameBuffer.getWidth(), frameBuffer.getHeight());
-    int* shadowMapZBuffer = initZBuffer(shadowMapFrameBuffer.getWidth(), shadowMapFrameBuffer.getHeight());
-
+    float* zBufferFirstPass = initZBuffer(frameBuffer.getWidth(), frameBuffer.getHeight());
+    float* zBuffer = initZBuffer(frameBuffer.getWidth(), frameBuffer.getHeight());
+    float* shadowMapZBuffer = initZBuffer(shadowMapFrameBuffer.getWidth(), shadowMapFrameBuffer.getHeight());
+     
     // camera
-    float cameraPlaneDistance = 10.0;
-    Projection = projectionMatrix(cameraPlaneDistance);
     Vec3f cameraDirection = Vec3f(0, 0, -1); // camera is always looking down -Z axis
     Vec3f up = Vec3f(0, 1, 0);
     Vec3f lookAtPoint = Vec3f(0, 0, 0);
+    float cameraPlaneDistance = (lookAtPoint - mainCameraPos).norm();
+    Projection = projectionMatrix(cameraPlaneDistance);
     Viewport = viewportMatrix(width / 8.0, height / 8.0, width * 3.0 / 4.0, height * 3.0 / 4.0);
 
     // model/texture
@@ -253,33 +260,41 @@ int main(int argc, char** argv) {
     normalMapTangentTexture.flip_vertically();
     
     // render shadow map
-    Vec3f shadowCameraPos = Vec3f(0, 1, 1);
+    Vec3f shadowCameraPos = Vec3f(0, 3, 3);
     ModelView = viewMatrix(shadowCameraPos, lookAtPoint, up);
 
-    ShadowMapShader shadowMapShader = ShadowMapShader(model);
+    DepthMapShader shadowMapShader = DepthMapShader(model);
     draw(model, shadowMapShader, cameraDirection, shadowMapFrameBuffer, shadowMapZBuffer);
     Matrix shadowModelToScreenMatrix = Viewport * Projection * ModelView;
 
-    // render main scene
+    // render depth pass
     ModelView = viewMatrix(mainCameraPos, lookAtPoint, up);
+    DepthMapShader depthMapShader = DepthMapShader(model);
+    draw(model, depthMapShader, cameraDirection, depthFrameBuffer, zBufferFirstPass);
 
+    // render main scene
+    
     // goes from main scene screen coordinates to shadow screen coordinates
     // works by first moving back to object coordinates then moving to shadow screen coordinates
     Matrix screenToShadowScreenMatrix = shadowModelToScreenMatrix * (Viewport * Projection * ModelView).invert();
 
-    Shader shader = Shader(model, &modelTexture, &specularTexture, &normalMapTangentTexture, &shadowMapFrameBuffer, screenToShadowScreenMatrix);
+    Shader shader = Shader(model, &modelTexture, &specularTexture, &normalMapTangentTexture, zBufferFirstPass, shadowMapZBuffer, screenToShadowScreenMatrix);
     draw(model, shader, cameraDirection, frameBuffer, zBuffer);
 
     // output images
-    std::string imageFileName = "bitmapImage.bmp";
-    frameBuffer.save(&imageFileName[0]);
+    BMPImage zBufferImage = zBufferToImage(zBufferFirstPass, width, height);
+    zBufferImage.set(332, 316, RED);
+    BMPImage shadowMapZBufferImage = zBufferToImage(shadowMapZBuffer, width, height);
+    shadowMapZBufferImage.set(333, 324, RED);
 
-    BMPImage zBufferImage = zBufferToImage(zBuffer, width, height);
+    std::string imageFileName = "bitmapImageShadowMap.bmp";
+    shadowMapZBufferImage.save(&imageFileName[0]);
+
     imageFileName = "bitmapImageZBuffer.bmp";
     zBufferImage.save(&imageFileName[0]);
 
-    imageFileName = "bitmapImageShadowMap.bmp";
-    shadowMapFrameBuffer.save(&imageFileName[0]);
+    imageFileName = "bitmapImage.bmp";
+    frameBuffer.save(&imageFileName[0]);
 
     std::cout << "Image generated!!";
     delete model;
