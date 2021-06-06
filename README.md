@@ -1,6 +1,18 @@
 # TinyRenderer
 Attempt at implementing the software renderer described here: https://github.com/ssloy/tinyrenderer
 
+Features
+* Full CPU based rasterizer 3D renderer
+* Backface culling
+* Z-buffering
+* Perspective camera
+* Phong lighting model with support for diffuse, normal, and specular textures
+* Shadow mapping
+* Ambient occlusion
+
+<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/shadow.png" width="600">
+<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/aocontrast.png" width="600">
+
 # Progress
 
 ### Points
@@ -172,12 +184,12 @@ Adding in the specular light using the specular map texture
 
 For shadows we basically just do one render pass where the camera is at the position of our light source and save the depth infomation into a texture.
 
-Here is what the "light source camera" sees.
+Here is what the "light source camera" sees (we don't need to store color here just depth).
 
-<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/specular.png" width="600">
+<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/shadow_depth_buffer.png" width="600">
 
 We then do our regular render pass at our normal camera position but at each point we check if the "light source camera" can see us. 
 
 If not then it means we're in the shadow.
 
-<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/specular.png" width="600">
+<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/shadow.png" width="600">
