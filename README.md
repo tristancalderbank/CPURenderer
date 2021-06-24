@@ -8,7 +8,7 @@ Features
 * Perspective camera
 * Phong lighting model with support for diffuse, normal, and specular textures
 * Shadow mapping
-* Ambient occlusion
+* Screen-space ambient occlusion (SSAO)
 
 <img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/shadow.png" width="600">
 <img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/aocontrast.png" width="600">
