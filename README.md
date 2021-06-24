@@ -1,6 +1,6 @@
 # TinyRenderer
 
-CPU based rasterizing 3D renderer (based on reading https://github.com/ssloy/tinyrenderer).
+CPU based rasterizing 3D renderer (based on course https://github.com/ssloy/tinyrenderer).
 
 Features
 * Backface culling
