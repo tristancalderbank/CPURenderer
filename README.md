@@ -12,6 +12,7 @@ Features
 
 <img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/shadow.png" width="600">
 <img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/aocontrast.png" width="600">
+<img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/zbuffer_buffer.png" width="600">
 
 # Progress
 
