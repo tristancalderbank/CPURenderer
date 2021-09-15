@@ -1,6 +1,6 @@
 # TinyRenderer
 
-CPU based rasterizing 3D renderer written in C++ (based on course https://github.com/ssloy/tinyrenderer).
+CPU based rasterizing 3D renderer written in C++
 
 Features
 * Backface culling
@@ -10,9 +10,23 @@ Features
 * Shadow mapping
 * Screen-space ambient occlusion (SSAO)
 
+**Example Renders**
+
+Final render
+
 <img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/shadow.png" width="600">
+
+SSAO (inverted)
+
 <img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/aocontrast.png" width="600">
+
+Depth map seen by shadow camera
+
 <img src="https://github.com/tristancalderbank/TinyRenderer/blob/master/TinyRenderer/images/png/shadow_depth_buffer.png" width="600">
+
+# References
+
+Based on course: https://github.com/ssloy/tinyrenderer
 
 # Progress
 
