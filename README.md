@@ -1,4 +1,4 @@
-# TinyRenderer
+# CPURenderer
 
 CPU based rasterizing 3D renderer written in C++
 
